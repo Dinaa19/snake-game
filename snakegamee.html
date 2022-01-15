@@ -1,0 +1,621 @@
+ <!-- My scene -->
+
+ <html>
+
+ <head>
+   <!-- <script src="lib/three.min.js"></script> -->
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r79/three.min.js"></script>
+   <script src="OrbitControls.js"></script>
+   <style>
+     .menu {
+       position: fixed;
+       top: 20px;
+       right: 20px;
+     }
+
+     button {
+       margin-bottom: 6px;
+       width: 120px;
+       font-size: 14px;
+       outline: none;
+       background: #333;
+       color: #ddd;
+       border: none;
+       opacity: .5;
+     }
+
+     button:hover {
+       background: #222;
+       color: #eee;
+     }
+
+     body {
+       margin: 0px;
+     }
+   </style>
+ </head>
+
+ <body>
+   <div class="menu">
+     <button onclick="spaceClick()">SPACE</button>
+     <button onclick="waterClick()">WATER</button>
+     <button onclick="lavaClick()">LAVA</button>
+   </div>
+
+   <canvas id="scene"></canvas>
+
+
+   <script>
+     //Get the height and the width of the window
+     var ww = window.innerWidth,
+       wh = window.innerHeight;
+
+     var keymove = 0
+     var speed = 51; //speed of the cube
+     var cubes = []; //array of cubes for the snake body
+     var j = 0;
+
+
+     function init() {
+
+       /* WEBGL RENDERER */
+
+       //Create the webGl renderer from Three
+       renderer = new THREE.WebGLRenderer({
+         canvas: document.getElementById('scene'),
+         //antialias: true
+       });
+       // renderer.shadowMap.enabled = true;
+       //Set the background of our scene
+       renderer.setClearColor(0x000000);
+       //Set the size of my renderer, I want it to be fullscreen
+       renderer.setSize(ww, wh);
+
+
+       /* SCENE */
+
+       //Create my scene
+       scene = new THREE.Scene();
+
+
+       /* CAMERA */
+
+       //Create a new Perspective Camera with four parameters
+
+       camera = new THREE.PerspectiveCamera(100, ww / wh, 0.1, 10000);
+       //We set our camera at x:0,y:-600 and z:500
+       camera.position.set(0, 0, 1000);
+       //camera.rotation.x=0.7;
+
+       //And finally we add our camera in our scene
+       scene.add(camera);
+
+
+       control = new THREE.OrbitControls(camera);
+
+
+       //Create all shapes in the scene
+       createShapes();
+       //--------------------------------------------------------(LIGHTING)-----------------------------------------
+
+
+       //-----------------light on the snake head--------------------------------------
+       snakeLight = new THREE.PointLight(0xffffff, 1, 2000, 2);
+       snakeLight.position.set(cube.position.x, cube.position.y, cube.position.z);
+       scene.add(snakeLight);
+       //-----------------light on the food--------------------------------------
+       foodLight = new THREE.PointLight(0xffffff, 1, 2000, 2);
+       foodLight.position.set(food.position.x, food.position.y, food.position.z);
+       scene.add(foodLight);
+
+
+       //This is very important, it will ask the renderer to render our scene
+       renderer.render(scene, camera);
+
+       //call all the animation functions here
+       movement();
+
+     };
+
+     //------------------------------------------------------------------------------------------------------
+
+     function createShapes() {
+       //MeshPhongMaterial
+       var upper = 725;
+       var upper2 = 475;
+
+       //------------------- (The snake)-----------------------------
+       //MeshPhongMaterial
+       snakeGeometry = new THREE.BoxGeometry(50, 50, 50);
+       material = new THREE.MeshPhongMaterial({
+         color: 0x0000ff
+       });
+       cube = new THREE.Mesh(snakeGeometry, material);
+       scene.add(cube);
+
+
+
+       //------------------- (The food)-----------------------------
+       //                              width   height    depth
+       foodGeometry = new THREE.BoxGeometry(50, 50, 50);
+       material2 = new THREE.MeshLambertMaterial({
+         color: 0xff0000
+       });
+       food = new THREE.Mesh(foodGeometry, material2);
+       food.position.x = 2 * (Math.random() * upper) - upper;
+       food.position.y = 2 * (Math.random() * upper2) - upper2;
+       food.position.z = 2 * (Math.random() * upper2) - upper2;
+       scene.add(food);
+
+
+       //------------------------------(white plane)------------------------------------------
+       planegeometry = new THREE.PlaneGeometry(1000, 1000); //left and right wall
+       planegeometry2 = new THREE.PlaneGeometry(1500, 1000); //back wall and floor
+
+       planematerial_Right = new THREE.MeshPhongMaterial({
+         color: 0xffffff,
+         side: THREE.DoubleSide,
+       }); //right wall
+       planematerial_Left = new THREE.MeshPhongMaterial({
+         color: 0xffffff,
+         side: THREE.DoubleSide,
+       }); //left
+
+
+       planematerial_Down = new THREE.MeshPhongMaterial({
+         color: 0xffffff,
+         side: THREE.DoubleSide,
+       }); //back wall and floor
+
+
+       planematerial_Back = new THREE.MeshPhongMaterial({
+         color: 0xffffff,
+         side: THREE.DoubleSide,
+       }); //back wall and floor
+
+       plane = new THREE.Mesh(planegeometry, planematerial_Right);
+       plane.position.x = 750;
+       plane.rotation.y = -1.5708 //90 degree
+       scene.add(plane); //right wall
+
+       plane2 = new THREE.Mesh(planegeometry, planematerial_Left);
+       plane2.position.x = -750;
+       plane2.rotation.y = 1.5708 //90 degree
+       scene.add(plane2); //left wall
+
+
+       plane3 = new THREE.Mesh(planegeometry2, planematerial_Back);
+       plane3.position.z = -500;
+       scene.add(plane3); //back wall
+
+
+       plane4 = new THREE.Mesh(planegeometry2, planematerial_Down);
+       plane4.position.y = -500;
+       plane4.rotation.x = 1.5708 //90 degree
+       scene.add(plane4); //Floor
+
+
+     };
+
+     function spaceplane() {
+       //------------------- (The plane)-----------------------------------------------------------------------
+       //   our dimensions x=1500px   y and z =1000px
+       //                                      (w)    (h)
+       planegeometry = new THREE.PlaneGeometry(1000, 1000); //left and right wall
+       planegeometry2 = new THREE.PlaneGeometry(1500, 1000); //back wall and floor
+
+       var loader = new THREE.TextureLoader();
+       var back = loader.load("space/space_bk.jpg");
+       var down = loader.load("space/space_dn.jpg");
+       var left = loader.load("space/space_lf.jpg");
+       var right = loader.load("space/space_rt.jpg");
+
+       planematerial_Right = new THREE.MeshPhongMaterial({
+         color: 0xffffff,
+         side: THREE.DoubleSide,
+         map: right
+       }); //right wall
+       planematerial_Left = new THREE.MeshPhongMaterial({
+         color: 0xffffff,
+         side: THREE.DoubleSide,
+         map: left
+       }); //left
+
+
+       planematerial_Down = new THREE.MeshPhongMaterial({
+         color: 0xffffff,
+         side: THREE.DoubleSide,
+         map: down
+       }); //back wall and floor
+
+
+       planematerial_Back = new THREE.MeshPhongMaterial({
+         color: 0xffffff,
+         side: THREE.DoubleSide,
+         map: back
+       }); //back wall and floor
+
+       plane = new THREE.Mesh(planegeometry, planematerial_Right);
+       scene.add(plane); //right wall
+       plane.position.x = 750;
+       plane.rotation.y = -1.5708 //90 degree
+
+       plane2 = new THREE.Mesh(planegeometry, planematerial_Left);
+       scene.add(plane2); //left wall
+       plane2.position.x = -750;
+       plane2.rotation.y = 1.5708 //90 degree
+
+       plane3 = new THREE.Mesh(planegeometry2, planematerial_Back);
+       scene.add(plane3); //back wall
+       plane3.position.z = -500;
+
+       plane4 = new THREE.Mesh(planegeometry2, planematerial_Down);
+       scene.add(plane4); //Floor
+       plane4.position.y = -500;
+       plane4.rotation.x = 1.5708 //90 degree
+
+
+     }
+
+     function lavaPlane() {
+       //------------------- (The plane)-----------------------------------------------------------------------
+       //   our dimensions x=1500px   y and z =1000px
+       //                                      (w)    (h)
+       planegeometry = new THREE.PlaneGeometry(1000, 1000); //left and right wall
+       planegeometry2 = new THREE.PlaneGeometry(1500, 1000); //back wall and floor
+
+       var loader = new THREE.TextureLoader();
+       var back = loader.load("lava/lava_bk.jpg");
+       var down = loader.load("lava/lava_dn.jpg");
+       var left = loader.load("lava/lava_lf.jpg");
+       var right = loader.load("lava/lava_rt.jpg");
+
+       planematerial_Right = new THREE.MeshPhongMaterial({
+         color: 0xffffff,
+         side: THREE.DoubleSide,
+         map: right
+       }); //right wall
+       planematerial_Left = new THREE.MeshPhongMaterial({
+         color: 0xffffff,
+         side: THREE.DoubleSide,
+         map: left
+       }); //left
+
+
+       planematerial_Down = new THREE.MeshPhongMaterial({
+         color: 0xffffff,
+         side: THREE.DoubleSide,
+         map: down
+       }); //back wall and floor
+
+
+       planematerial_Back = new THREE.MeshPhongMaterial({
+         color: 0xffffff,
+         side: THREE.DoubleSide,
+         map: back
+       }); //back wall and floor
+
+       plane = new THREE.Mesh(planegeometry, planematerial_Right);
+       scene.add(plane); //right wall
+       plane.position.x = 750;
+       plane.rotation.y = -1.5708 //90 degree
+
+       plane2 = new THREE.Mesh(planegeometry, planematerial_Left);
+       scene.add(plane2); //left wall
+       plane2.position.x = -750;
+       plane2.rotation.y = 1.5708 //90 degree
+
+       plane3 = new THREE.Mesh(planegeometry2, planematerial_Back);
+       scene.add(plane3); //back wall
+       plane3.position.z = -500;
+
+       plane4 = new THREE.Mesh(planegeometry2, planematerial_Down);
+       scene.add(plane4); //Floor
+       plane4.position.y = -500;
+       plane4.rotation.x = 1.5708 //90 degree
+
+
+     }
+
+     function waterPlane() {
+       //------------------- (The plane)-----------------------------------------------------------------------
+       //   our dimensions x=1500px   y and z =1000px
+       //                                      (w)    (h)
+       planegeometry = new THREE.PlaneGeometry(1000, 1000); //left and right wall
+       planegeometry2 = new THREE.PlaneGeometry(1500, 1000); //back wall and floor
+
+       var loader = new THREE.TextureLoader();
+       var back = loader.load("water/water_bk.jpg");
+       var down = loader.load("water/water_dn.jpg");
+       var left = loader.load("water/water_lf.jpg");
+       var right = loader.load("water/water_rt.jpg");
+
+       planematerial_Right = new THREE.MeshPhongMaterial({
+         color: 0xffffff,
+         side: THREE.DoubleSide,
+         map: right
+       }); //right wall
+       planematerial_Left = new THREE.MeshPhongMaterial({
+         color: 0xffffff,
+         side: THREE.DoubleSide,
+         map: left
+       }); //left
+
+
+       planematerial_Down = new THREE.MeshPhongMaterial({
+         color: 0xffffff,
+         side: THREE.DoubleSide,
+         map: down
+       }); //back wall and floor
+
+
+       planematerial_Back = new THREE.MeshPhongMaterial({
+         color: 0xffffff,
+         side: THREE.DoubleSide,
+         map: back
+       }); //back wall and floor
+
+       plane = new THREE.Mesh(planegeometry, planematerial_Right);
+       scene.add(plane); //right wall
+       plane.position.x = 750;
+       plane.rotation.y = -1.5708 //90 degree
+
+       plane2 = new THREE.Mesh(planegeometry, planematerial_Left);
+       scene.add(plane2); //left wall
+       plane2.position.x = -750;
+       plane2.rotation.y = 1.5708 //90 degree
+
+       plane3 = new THREE.Mesh(planegeometry2, planematerial_Back);
+       scene.add(plane3); //back wall
+       plane3.position.z = -500;
+
+       plane4 = new THREE.Mesh(planegeometry2, planematerial_Down);
+       scene.add(plane4); //Floor
+       plane4.position.y = -500;
+       plane4.rotation.x = 1.5708 //90 degree
+
+
+     }
+
+     //------------------------------------(Key functions----------------------------------------------------------
+     document.onkeydown = (e) => {
+       var currentX = cube.position.x;
+
+       if (e.key == 'ArrowUp') { // up
+         keymove = 1;
+       } else if (e.key == 'ArrowDown') { // down
+         keymove = 2;
+       } else if (e.key == 'ArrowRight') { //right
+         keymove = 3;
+       } else if (e.keyCode == '37') { //left
+         keymove = 4;
+       } else if (e.keyCode == '90') { //in z
+         keymove = 5;
+       } else if (e.keyCode == '88') { //out  x
+         keymove = 6;
+       } else if (e.keyCode == '87') { //zoom in
+         camera.position.z -= 10;
+         camera.position.y += 10;
+       } else if (e.keyCode == '83') { //zoom out
+         camera.position.z += 10;
+         camera.position.y -= 10;
+       } else if (e.keyCode == '68') { //camera right
+         camera.position.x += 10;
+
+       } else if (e.keyCode == '65') { //camera left
+         camera.position.x -= 10;
+       }
+     };
+
+     var lastRenderTime = 0;
+     var fps = 5; //the number of time the animation function renders per second
+     // Animation function------------------------------------------------------------------------------------------
+     var movement = function(currentTime) {
+       var upper = 725;
+       var upper2 = 475;
+
+       requestAnimationFrame(movement);
+       var secondsSinceLastRender = (currentTime - lastRenderTime) / 1000; // over 1000 3shan n7wl mn milliseconds --> seconds
+       if (secondsSinceLastRender < 1 / fps) {
+         return;
+       }
+       lastRenderTime = currentTime;
+
+
+       switch (keymove) {
+
+         case 1: //up
+         {
+           cube.position.y += speed;
+           if (cube.position.y >= 475) {
+             cube.position.y = -475;
+           }
+         }
+         break;
+
+       case 2: //down
+       {
+         cube.position.y -= speed;
+         if (cube.position.y <= -475) {
+           cube.position.y = 475;
+         }
+       }
+       break;
+
+       case 3: //right
+       {
+         cube.position.x += speed;
+         if (cube.position.x >= 725) {
+           cube.position.x = -725;
+         }
+       }
+       break;
+
+       case 4: //left
+
+       {
+         cube.position.x -= speed;
+         if (cube.position.x <= -725) {
+           cube.position.x = 725;
+         }
+       }
+       break;
+
+       case 5: //in
+       {
+         cube.position.z -= speed;
+         if (cube.position.z <= -475) {
+           cube.position.z = 475;
+         }
+       }
+       break;
+
+       case 6: //out
+       {
+         cube.position.z += speed;
+         if (cube.position.z >= 475) {
+           cube.position.z = -475;
+         }
+       }
+       break;
+
+       }
+
+       //-------------(Collision with food)-----------------------------------
+       if (checkTouching(cube, food)) {
+         console.log('collision');
+         food.position.x = 2 * (Math.random() * upper) - upper;
+         food.position.y = 2 * (Math.random() * upper2) - upper2;
+         food.position.z = 2 * (Math.random() * upper2) - upper2;
+
+         // the position of light for food when collision happen
+         foodLight.position.set(food.position.x, food.position.y, food.position.z);
+
+         cubes[j] = new THREE.Mesh(snakeGeometry, material); // when a collsion happen we create a new mesh(cube) in the cubes array
+         scene.add(cubes[j]);
+         j++;
+         //increase the speed the first time only
+         if(j==1){
+           fps+=5;}
+
+        console.log("j= ", j);
+       }
+       //-------------(Collision of snake itself)-----------------------------------
+       console.log("array length", cubes.length);
+
+         for (var q = 0; q < cubes.length; q++) {
+
+           if (checkTouching(cube, cubes[q])) {
+             alert("game over");
+         }
+       }
+
+       //update the light of the snake head
+       snakeLight.position.set(cube.position.x, cube.position.y, cube.position.z);
+       scene.add(snakeLight);
+
+       renderer.render(scene, camera);
+
+       followsnake();
+
+     }
+
+
+
+     function followsnake() {
+
+
+       for (var i = j - 1; i >= 0; i--) {
+
+         if (i == 0) {
+           cubes[0].position.x = cube.position.x;
+           cubes[0].position.y = cube.position.y;
+           cubes[0].position.z = cube.position.z;
+         } else {
+           cubes[i].position.x = cubes[i - 1].position.x;
+           cubes[i].position.y = cubes[i - 1].position.y;
+           cubes[i].position.z = cubes[i - 1].position.z;
+         }
+       }
+     }
+
+
+
+
+
+
+
+
+
+
+
+     // a (80,25,25)   d(10,25,25)
+     //                 cube      food
+     function checkTouching(a, d) {
+       let x1 = a.position.x + a.geometry.parameters.width / 2; //  80 + 25
+       let x2 = a.position.x - a.geometry.parameters.width / 2; //  80 - 25
+       let x3 = d.position.x + d.geometry.parameters.width / 2; //  10 + 25
+       let x4 = d.position.x - d.geometry.parameters.width / 2; //  10 - 25
+
+       let y1 = a.position.y - a.geometry.parameters.height / 2;
+       let y2 = a.position.y + a.geometry.parameters.height / 2;
+       let y3 = d.position.y - d.geometry.parameters.height / 2;
+       let y4 = d.position.y + d.geometry.parameters.height / 2;
+
+       let z1 = a.position.z - a.geometry.parameters.depth / 2;
+       let z2 = a.position.z + a.geometry.parameters.depth / 2;
+       let z3 = d.position.z - d.geometry.parameters.depth / 2;
+       let z4 = d.position.z + d.geometry.parameters.depth / 2;
+
+      //   105  -15    55   35
+       if ( x1 < x4 || x2 > x3     ||     y2 < y3 || y1 > y4     ||       z1 > z4 || z2 < z3) {
+         return false;
+       }
+       return true;
+     }
+
+
+     function spaceClick() {
+       spaceplane();
+     }
+
+     function waterClick() {
+       waterPlane();
+     }
+
+     function lavaClick() {
+       lavaPlane();
+     }
+
+
+
+     //Init our scene
+     init();
+   </script>
+
+ </body>
+
+ </html>
+ <!-- a(80,25,25)   d(80,25,25)-->
+<!-- function checkTouching(a, d) {
+  let r1 = a.position.x + a.geometry.parameters.width / 2;   80+25
+  let l1 = a.position.x - a.geometry.parameters.width / 2;   80-25
+  let r2 = d.position.x + d.geometry.parameters.width / 2;   80+25
+  let l2 = d.position.x - d.geometry.parameters.width / 2;   80-25
+
+  let b1 = a.position.y - a.geometry.parameters.height / 2;
+  let t1 = a.position.y + a.geometry.parameters.height / 2;
+  let b2 = d.position.y - d.geometry.parameters.height / 2;
+  let t2 = d.position.y + d.geometry.parameters.height / 2;
+
+  let f1 = a.position.z - a.geometry.parameters.depth / 2; //
+  let B1 = a.position.z + a.geometry.parameters.depth / 2; //
+  let f2 = d.position.z - d.geometry.parameters.depth / 2; //
+  let B2 = d.position.z + d.geometry.parameters.depth / 2; //
+
+ //              105  55               55  105
+  if (t1 < b2 || r1 < l2 || b1 > t2 || l1 > r2 || f1 > B2 || B1 < f2) {
+    return false;
+  }
+  return true;
+} -->
